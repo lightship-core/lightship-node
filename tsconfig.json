@@ -1,0 +1,16 @@
+{
+  "include": ["src/index.ts"],
+  "exclude": ["dist"],
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "target": "esnext",
+    "module": "esnext",
+    "declaration": true,
+    "declarationDir": "dist",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": false
+  }
+}

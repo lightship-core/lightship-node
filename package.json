@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "development": "rollup --config rollup.config.ts --environment NODE_ENV:development",
+    "production": "rollup --config rollup.config.ts --environment NODE_ENV:production",
+    "types": "tsc --emitDeclarationOnly --project tsconfig.json"
+  },
+  "devDependencies": {
+    "@aminnairi/rollup-plugin-external": "0.1.3",
+    "@rollup/plugin-typescript": "8.3.2",
+    "@types/node": "17.0.24",
+    "rollup": "2.70.2",
+    "rollup-plugin-delete": "2.0.0",
+    "rollup-plugin-terser": "7.0.2",
+    "typescript": "4.6.3"
+  }
+}
