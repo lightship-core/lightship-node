@@ -1,6 +1,4 @@
-import http, { RequestOptions, IncomingHttpHeaders } from "http";
-import { URL } from "url";
-import { resolve } from "dns/promises";
+import fetch, { Headers } from "node-fetch";
 
 export interface RuleResults {
   name: string,
@@ -9,7 +7,7 @@ export interface RuleResults {
 
 export interface AuditRule {
   name: string,
-  isValid: (options: { headers: IncomingHttpHeaders, body: string }) => boolean
+  isValid: (options: { headers: Headers, body: string }) => boolean
 }
 
 export interface AuditRules {
@@ -44,7 +42,7 @@ const getRuleResultsScore = ({ ruleResults }: { ruleResults: Array<RuleResults> 
   return Math.floor(ruleResults.reduce((score, ruleResult) => ruleResult.passes ? score + 1 : score, 0) / (ruleResults.length || 1) * 100);
 };
 
-const getRuleResults = ({ rules, headers, body }: { rules: Array<AuditRule>, headers: IncomingHttpHeaders, body: string }): Array<RuleResults> => {
+const getRuleResults = ({ rules, headers, body }: { rules: Array<AuditRule>, headers: Headers, body: string }): Array<RuleResults> => {
   return rules.map(rule => {
     return {
       name: rule.name,
@@ -54,51 +52,27 @@ const getRuleResults = ({ rules, headers, body }: { rules: Array<AuditRule>, hea
 };
 
 export const audit = (options: AuditOptions): Promise<AuditResponse> => {
-  return new Promise((succeed, fail) => {
-    const url = new URL(options.url);
-    const host = url.hostname;
-    const port = Number(url.port) || 80;
-    const method = "GET";
-    const path = url.pathname;
+  const millisecondsBeforeRequest = new Date().getTime();
 
-    return resolve(host).then(([hostname]) => {
-      let body = "";
+  return fetch(options.url).then(response => {
+    return response.text().then(body => {
+      const millisecondsAfterRequest = new Date().getTime();
+      const {headers} = response;
+      const seoResults = getRuleResults({ rules: options.rules.seo, headers, body });
+      const securityResults = getRuleResults({ rules: options.rules.security, headers, body });
+      const seoScore = getRuleResultsScore({ ruleResults: seoResults });
+      const securityScore = getRuleResultsScore({ ruleResults: securityResults });
 
-      const millisecondsBeforeRequest = new Date().getTime();
-
-      const request = http.request({hostname, path, method, port}, response => {
-        const headers = response.headers;
-
-        response.on("data", chunk => {
-          body += chunk; 
-        });
-
-        response.on("end", () => {
-          const millisecondsAfterRequest = new Date().getTime();
-
-          const seoResults = getRuleResults({ rules: options.rules.seo, headers, body });
-          const securityResults = getRuleResults({ rules: options.rules.security, headers, body });
-          const seoScore = getRuleResultsScore({ ruleResults: seoResults });
-          const securityScore = getRuleResultsScore({ ruleResults: securityResults });
-
-          succeed({
-            url: options.url,
-            durationInSeconds: (millisecondsAfterRequest - millisecondsBeforeRequest) / 1000,
-            score: {
-              seo: seoScore,
-              security: securityScore
-            },
-            seo: seoResults,
-            security: securityResults
-          });
-        });
-      });
-
-      request.on("error", error => {
-        fail(error);
-      });
-
-      request.end();
+      return {
+        url: options.url,
+        durationInSeconds: (millisecondsAfterRequest - millisecondsBeforeRequest) / 1000,
+        score: {
+          seo: seoScore,
+          security: securityScore
+        },
+        seo: seoResults,
+        security: securityResults
+      };
     });
   });
 };
