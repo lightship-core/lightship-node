@@ -1,4 +1,4 @@
-# ligthship-node
+# lightship-node
 
 ## Requirements
 
